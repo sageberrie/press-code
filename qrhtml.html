@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Press Code — QR Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    /* spacing scale — nothing outside this set */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 16px;
+    --sp-4: 24px;
+    --sp-5: 32px;
+    --sp-6: 48px;
+    --sp-7: 64px;
+    --sp-8: 96px;
+  }
+
+  /* light — the white-to-teal row */
+  :root, [data-theme="light"]{
+    --bg: #FFFFFF;
+    --bg-deep: #DCEAEA;
+    --panel: #FFFFFF;
+    --ink: #0B201F;
+    --ink-soft: #3F6B65;
+    --line: #A9D6D0;
+    --accent: #00857A;
+    --accent-ink: #FFFFFF;
+  }
+
+  /* dark — the black-to-teal row */
+  [data-theme="dark"]{
+    --bg: #000000;
+    --bg-deep: #0A2423;
+    --panel: #071716;
+    --ink: #E7F4F2;
+    --ink-soft: #7FBAB3;
+    --line: #135049;
+    --accent: #229086;
+    --accent-ink: #04120F;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    background-image: radial-gradient(var(--line) 0.6px, transparent 0.6px);
+    background-size: 18px 18px;
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    min-height:100vh;
+    padding:var(--sp-6) var(--sp-4) var(--sp-8);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  .wrap{
+    max-width:920px;
+    margin:0 auto;
+  }
+
+  /* ---------- header ---------- */
+  header{
+    border-bottom:2px solid var(--ink);
+    padding-bottom:var(--sp-3);
+    margin-bottom:var(--sp-5);
+  }
+  .header-top{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:var(--sp-3);
+    flex-wrap:wrap;
+    margin-bottom:var(--sp-2);
+  }
+  header h1{
+    font-family:'Lora', serif;
+    font-weight:600;
+    font-size:32px;
+    margin:0;
+    letter-spacing:0.2px;
+  }
+  header h1 span{
+    color:var(--accent);
+    font-style:italic;
+    font-weight:500;
+  }
+  header p{
+    margin:0;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+
+  /* ---------- theme toggle ---------- */
+  .theme-toggle{
+    display:inline-flex;
+    border:1.5px solid var(--ink);
+  }
+  .theme-option{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    background:var(--panel);
+    color:var(--ink-soft);
+    border:none;
+    padding:var(--sp-2) var(--sp-3);
+    cursor:pointer;
+  }
+  .theme-option + .theme-option{
+    border-left:1.5px solid var(--ink);
+  }
+  .theme-option[aria-pressed="true"]{
+    background:var(--ink);
+    color:var(--bg);
+  }
+  .theme-option:hover:not([aria-pressed="true"]){
+    color:var(--ink);
+  }
+
+  /* ---------- layout ---------- */
+  .layout{
+    display:grid;
+    grid-template-columns:1.05fr 0.95fr;
+    gap:var(--sp-5);
+  }
+  @media (max-width:760px){
+    .layout{grid-template-columns:1fr;}
+    /* the result matters more than the controls on a small screen — show it first */
+    .preview-panel{order:1;}
+    .controls-panel{order:2;}
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1.5px solid var(--ink);
+    padding:var(--sp-5);
+  }
+
+  /* ---------- controls ---------- */
+  .field{margin-bottom:var(--sp-4);}
+  .field:last-child{margin-bottom:0;}
+  label{
+    display:block;
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-bottom:var(--sp-2);
+    font-family:'Lora',serif;
+    font-style:italic;
+  }
+  input[type="text"], input[type="url"], select{
+    width:100%;
+    padding:var(--sp-2) var(--sp-3);
+    border:1.5px solid var(--ink);
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13.5px;
+  }
+  input[type="text"]:focus, input[type="url"]:focus, select:focus,
+  button:focus-visible, .logo-drop:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+  .row{
+    display:flex;
+    gap:var(--sp-3);
+  }
+  .row .field{flex:1;}
+  .color-field{
+    display:flex;
+    align-items:center;
+    gap:var(--sp-2);
+    border:1.5px solid var(--ink);
+    padding:var(--sp-2) var(--sp-3);
+    background:var(--bg);
+  }
+  .color-field input[type="color"]{
+    width:32px;
+    height:32px;
+    border:1px solid var(--ink);
+    padding:0;
+    background:none;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .color-field span{
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+  .divider{
+    border:none;
+    border-top:1px dashed var(--line);
+    margin:var(--sp-5) 0;
+  }
+  .logo-drop{
+    border:1.5px dashed var(--ink-soft);
+    padding:var(--sp-3);
+    text-align:center;
+    font-size:12px;
+    color:var(--ink-soft);
+    cursor:pointer;
+    background:var(--bg);
+    transition:border-color 0.15s ease;
+  }
+  .logo-drop:hover{border-color:var(--accent);}
+  .logo-drop.has-logo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    text-align:left;
+  }
+  .logo-preview{
+    display:flex;
+    align-items:center;
+    gap:var(--sp-2);
+  }
+  .logo-preview img{
+    width:32px;height:32px;
+    object-fit:contain;
+    border:1px solid var(--line);
+    background:#fff;
+  }
+  .remove-logo{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--accent);
+    background:none;
+    border:none;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:0;
+  }
+  .range-row{
+    display:flex;
+    align-items:center;
+    gap:var(--sp-3);
+  }
+  input[type="range"]{
+    flex:1;
+    accent-color:var(--accent);
+  }
+  .range-val{
+    font-size:12px;
+    color:var(--ink-soft);
+    min-width:34px;
+    text-align:right;
+  }
+  .help{
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-top:var(--sp-2);
+    line-height:1.55;
+  }
+
+  /* ---------- preview ---------- */
+  .preview-panel{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:var(--sp-4);
+  }
+  .card-mock{
+    background:var(--bg-deep);
+    border:1.5px solid var(--ink);
+    padding:var(--sp-5);
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .card-mock::before{
+    content:"";
+    position:absolute;
+    top:var(--sp-2);left:var(--sp-2);right:var(--sp-2);bottom:var(--sp-2);
+    border:1px dashed var(--line);
+    pointer-events:none;
+  }
+  #qr-target{
+    line-height:0;
+  }
+  #qr-target img, #qr-target canvas{
+    display:block;
+    image-rendering:pixelated;
+  }
+  .preview-label{
+    font-size:11px;
+    color:var(--ink-soft);
+    text-align:center;
+    font-style:italic;
+    font-family:'Lora',serif;
+  }
+  .download-row{
+    display:flex;
+    gap:var(--sp-3);
+    width:100%;
+  }
+  button.primary{
+    flex:1;
+    background:var(--ink);
+    color:var(--bg);
+    border:1.5px solid var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    font-weight:600;
+    padding:var(--sp-3) var(--sp-4);
+    cursor:pointer;
+    transition:background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  button.primary:hover{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:var(--accent-ink);
+  }
+  .footnote{
+    font-size:10px;
+    letter-spacing:0.5px;
+    color:var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="header-top">
+      <h1>Press <span>Code</span></h1>
+      <div class="theme-toggle" role="group" aria-label="Theme">
+        <button type="button" class="theme-option" id="theme-light-btn" aria-pressed="true">Light</button>
+        <button type="button" class="theme-option" id="theme-dark-btn" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+    <p>qr generation — colors + center mark</p>
+  </header>
+
+  <div class="layout">
+    <div class="panel controls-panel">
+      <div class="field">
+        <label for="qr-text">Content (URL or text)</label>
+        <input type="text" id="qr-text" value="https://example.com" placeholder="https://example.com or any text">
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Foreground</label>
+          <div class="color-field">
+            <input type="color" id="fg-color" value="#0B201F">
+            <span id="fg-hex">#0B201F</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Background</label>
+          <div class="color-field">
+            <input type="color" id="bg-color" value="#FFFFFF">
+            <span id="bg-hex">#FFFFFF</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="qr-size">Size</label>
+        <div class="range-row">
+          <input type="range" id="qr-size" min="200" max="600" step="20" value="360">
+          <span class="range-val" id="qr-size-val">360px</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="field">
+        <label>Center logo (optional)</label>
+        <div class="logo-drop" id="logo-drop" tabindex="0" role="button">
+          <span id="logo-drop-text">click to upload an image</span>
+        </div>
+        <input type="file" id="logo-input" accept="image/*" style="display:none">
+        <div class="help">A logo forces high error-correction automatically, so the code still scans with the mark covering the middle. Keep logos simple for best results.</div>
+      </div>
+
+      <div class="field" id="logo-size-field" style="display:none;">
+        <label for="logo-size">Logo size</label>
+        <div class="range-row">
+          <input type="range" id="logo-size" min="12" max="30" step="1" value="20">
+          <span class="range-val" id="logo-size-val">20%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel preview-panel">
+      <div class="card-mock">
+        <div id="qr-target"></div>
+      </div>
+      <div class="preview-label">live preview</div>
+      <div class="download-row">
+        <button class="primary" id="download-btn">Download PNG</button>
+      </div>
+      <div class="footnote">renders locally — nothing leaves your browser</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const textInput = document.getElementById('qr-text');
+  const fgColor = document.getElementById('fg-color');
+  const bgColor = document.getElementById('bg-color');
+  const fgHex = document.getElementById('fg-hex');
+  const bgHex = document.getElementById('bg-hex');
+  const sizeSlider = document.getElementById('qr-size');
+  const sizeVal = document.getElementById('qr-size-val');
+  const logoDrop = document.getElementById('logo-drop');
+  const logoInput = document.getElementById('logo-input');
+  const logoDropText = document.getElementById('logo-drop-text');
+  const logoSizeField = document.getElementById('logo-size-field');
+  const logoSizeSlider = document.getElementById('logo-size');
+  const logoSizeVal = document.getElementById('logo-size-val');
+  const target = document.getElementById('qr-target');
+  const downloadBtn = document.getElementById('download-btn');
+
+  let logoImage = null; // HTMLImageElement or null
+  let finalCanvas = null;
+
+  function debounce(fn, ms){
+    let t;
+    return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn(...args), ms); };
+  }
+
+  function render(){
+    const text = textInput.value.trim() || ' ';
+    const size = parseInt(sizeSlider.value, 10);
+    const fg = fgColor.value;
+    const bg = bgColor.value;
+
+    target.innerHTML = '';
+
+    // Use high correction whenever a logo is present so the center can be covered safely.
+    const correctLevel = logoImage ? QRCode.CorrectLevel.H : QRCode.CorrectLevel.M;
+
+    // qrcodejs renders into target as canvas (or table fallback). Give it a temp container.
+    const tempDiv = document.createElement('div');
+    new QRCode(tempDiv, {
+      text: text,
+      width: size,
+      height: size,
+      colorDark: fg,
+      colorLight: bg,
+      correctLevel: correctLevel
+    });
+
+    // qrcodejs is async-ish via drawing; wait a tick for the canvas/img to populate.
+    setTimeout(()=>{
+      const srcCanvas = tempDiv.querySelector('canvas');
+      const srcImg = tempDiv.querySelector('img');
+
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = size;
+      outCanvas.height = size;
+      const ctx = outCanvas.getContext('2d');
+
+      const draw = () => {
+        if (srcCanvas) {
+          ctx.drawImage(srcCanvas, 0, 0, size, size);
+        } else if (srcImg) {
+          ctx.drawImage(srcImg, 0, 0, size, size);
+        }
+
+        if (logoImage) {
+          const pct = parseInt(logoSizeSlider.value, 10) / 100;
+          const logoSize = size * pct;
+          const x = (size - logoSize) / 2;
+          const y = (size - logoSize) / 2;
+          const pad = logoSize * 0.14;
+
+          // background-colored plate behind the logo for scan contrast
+          ctx.fillStyle = bg;
+          const plate = logoSize + pad * 2;
+          const px = (size - plate) / 2;
+          const py = (size - plate) / 2;
+          roundRect(ctx, px, py, plate, plate, plate * 0.16);
+          ctx.fill();
+          ctx.strokeStyle = fg;
+          ctx.lineWidth = Math.max(1, size * 0.004);
+          roundRect(ctx, px, py, plate, plate, plate * 0.16);
+          ctx.stroke();
+
+          ctx.drawImage(logoImage, x, y, logoSize, logoSize);
+        }
+
+        finalCanvas = outCanvas;
+        target.innerHTML = '';
+        outCanvas.style.width = size + 'px';
+        outCanvas.style.height = size + 'px';
+        target.appendChild(outCanvas);
+      };
+
+      if (srcImg && !srcImg.complete) {
+        srcImg.onload = draw;
+      } else {
+        draw();
+      }
+    }, 60);
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  const debouncedRender = debounce(render, 250);
+
+  textInput.addEventListener('input', debouncedRender);
+  fgColor.addEventListener('input', ()=>{ fgHex.textContent = fgColor.value.toUpperCase(); render(); });
+  bgColor.addEventListener('input', ()=>{ bgHex.textContent = bgColor.value.toUpperCase(); render(); });
+  sizeSlider.addEventListener('input', ()=>{ sizeVal.textContent = sizeSlider.value + 'px'; debouncedRender(); });
+  logoSizeSlider.addEventListener('input', ()=>{ logoSizeVal.textContent = logoSizeSlider.value + '%'; debouncedRender(); });
+
+  logoDrop.addEventListener('click', ()=> logoInput.click());
+  logoDrop.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); logoInput.click(); }
+  });
+  logoInput.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        logoImage = img;
+        logoSizeField.style.display = 'block';
+        logoDrop.classList.add('has-logo');
+        logoDrop.innerHTML = `
+          <div class="logo-preview">
+            <img src="${ev.target.result}" alt="logo preview">
+            <span>${file.name}</span>
+          </div>
+          <button class="remove-logo" id="remove-logo-btn" type="button">remove</button>
+        `;
+        document.getElementById('remove-logo-btn').addEventListener('click', (evt)=>{
+          evt.stopPropagation();
+          logoImage = null;
+          logoSizeField.style.display = 'none';
+          logoDrop.classList.remove('has-logo');
+          logoDrop.innerHTML = '<span id="logo-drop-text">click to upload an image</span>';
+          render();
+        });
+        render();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  downloadBtn.addEventListener('click', ()=>{
+    if (!finalCanvas) return;
+    const link = document.createElement('a');
+    link.download = 'qr-code.png';
+    link.href = finalCanvas.toDataURL('image/png');
+    link.click();
+  });
+
+  // ---------- theme switching ----------
+  const rootEl = document.documentElement;
+  const themeLightBtn = document.getElementById('theme-light-btn');
+  const themeDarkBtn = document.getElementById('theme-dark-btn');
+  const THEME_KEY = 'press-code-theme';
+
+  function setTheme(theme){
+    rootEl.setAttribute('data-theme', theme);
+    themeLightBtn.setAttribute('aria-pressed', String(theme === 'light'));
+    themeDarkBtn.setAttribute('aria-pressed', String(theme === 'dark'));
+    try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+  }
+
+  themeLightBtn.addEventListener('click', ()=> setTheme('light'));
+  themeDarkBtn.addEventListener('click', ()=> setTheme('dark'));
+
+  let savedTheme = null;
+  try { savedTheme = localStorage.getItem(THEME_KEY); } catch (e) {}
+  if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
+
+  // initial render
+  render();
+</script>
+</body>
+</html>
